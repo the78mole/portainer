@@ -54,7 +54,7 @@ func (manager *ComposeStackManager) Up(ctx context.Context, stack *portainer.Sta
 		defer proxy.Close()
 	}
 
-	envFilePath, err := createEnvFile(stack)
+	envFilePath, err := manager.createEnvFile(stack)
 	if err != nil {
 		return errors.Wrap(err, "failed to create env file")
 	}
@@ -85,7 +85,7 @@ func (manager *ComposeStackManager) Run(ctx context.Context, stack *portainer.St
 		defer proxy.Close()
 	}
 
-	envFilePath, err := createEnvFile(stack)
+	envFilePath, err := manager.createEnvFile(stack)
 	if err != nil {
 		return errors.Wrap(err, "failed to create env file")
 	}
@@ -135,7 +135,7 @@ func (manager *ComposeStackManager) Pull(ctx context.Context, stack *portainer.S
 		defer proxy.Close()
 	}
 
-	envFilePath, err := createEnvFile(stack)
+	envFilePath, err := manager.createEnvFile(stack)
 	if err != nil {
 		return errors.Wrap(err, "failed to create env file")
 	}
@@ -171,7 +171,7 @@ func (manager *ComposeStackManager) fetchEndpointProxy(endpoint *portainer.Endpo
 
 // createEnvFile creates a file that would hold both "in-place" and default environment variables.
 // It will return the name of the file if the stack has "in-place" env vars, otherwise empty string.
-func createEnvFile(stack *portainer.Stack) (string, error) {
+func (manager *ComposeStackManager) createEnvFile(stack *portainer.Stack) (string, error) {
 	// Check if we have any environment variables to write or PGP secrets to decrypt
 	pgpSecretsPath := path.Join(stack.ProjectPath, path.Dir(stack.EntryPoint), "stack.secrets.env.pgp")
 	hasPGPSecrets := false
@@ -203,7 +203,7 @@ func createEnvFile(stack *portainer.Stack) (string, error) {
 
 	// Copy from PGP-encrypted secrets if available
 	if hasPGPSecrets {
-		if err := copyPGPSecretsFile(envfile, pgpSecretsPath); err != nil {
+		if err := manager.copyPGPSecretsFile(envfile, pgpSecretsPath); err != nil {
 			log.Warn().
 				Err(err).
 				Str("pgpSecretsPath", pgpSecretsPath).
@@ -245,11 +245,30 @@ func copyConfigEnvVars(w io.Writer, envs []portainer.Pair) error {
 }
 
 // copyPGPSecretsFile decrypts and copies the PGP-encrypted secrets file to the writer
-func copyPGPSecretsFile(w io.Writer, pgpSecretsPath string) error {
-	// Get the PGP private key from environment
+func (manager *ComposeStackManager) copyPGPSecretsFile(w io.Writer, pgpSecretsPath string) error {
+	// First, try to get the PGP private key from environment variable
 	privateKey := crypto.GetPGPPrivateKeyFromEnv()
+	passphrase := ""
+
+	// If not found in environment, try to get from settings
 	if privateKey == "" {
-		return fmt.Errorf("PGP private key not found in environment variable PORTAINER_PGP_PRIVATE_KEY")
+		err := manager.dataStore.ViewTx(func(tx dataservices.DataStoreTx) error {
+			settings, err := tx.Settings().Settings()
+			if err != nil {
+				return fmt.Errorf("failed to get settings: %w", err)
+			}
+
+			if settings.PGPSettings.PrivateKey == "" {
+				return fmt.Errorf("PGP private key not found in environment variable PORTAINER_PGP_PRIVATE_KEY or in settings")
+			}
+
+			privateKey = settings.PGPSettings.PrivateKey
+			passphrase = settings.PGPSettings.Passphrase
+			return nil
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	// Validate the private key
@@ -258,7 +277,13 @@ func copyPGPSecretsFile(w io.Writer, pgpSecretsPath string) error {
 	}
 
 	// Create decryptor and decrypt the file
-	decryptor := crypto.NewPGPDecryptor(privateKey)
+	var decryptor *crypto.PGPDecryptor
+	if passphrase != "" {
+		decryptor = crypto.NewPGPDecryptorWithPassphrase(privateKey, passphrase)
+	} else {
+		decryptor = crypto.NewPGPDecryptor(privateKey)
+	}
+
 	decryptedData, err := decryptor.DecryptFile(pgpSecretsPath)
 	if err != nil {
 		return fmt.Errorf("failed to decrypt PGP secrets file: %w", err)

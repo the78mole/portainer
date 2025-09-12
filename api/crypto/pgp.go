@@ -14,12 +14,22 @@ import (
 // PGPDecryptor handles PGP decryption operations
 type PGPDecryptor struct {
 	privateKey string
+	passphrase string
 }
 
 // NewPGPDecryptor creates a new PGP decryptor with the provided private key
 func NewPGPDecryptor(privateKey string) *PGPDecryptor {
 	return &PGPDecryptor{
 		privateKey: privateKey,
+		passphrase: "",
+	}
+}
+
+// NewPGPDecryptorWithPassphrase creates a new PGP decryptor with the provided private key and passphrase
+func NewPGPDecryptorWithPassphrase(privateKey, passphrase string) *PGPDecryptor {
+	return &PGPDecryptor{
+		privateKey: privateKey,
+		passphrase: passphrase,
 	}
 }
 
@@ -40,6 +50,26 @@ func (p *PGPDecryptor) DecryptData(encryptedData []byte) ([]byte, error) {
 	keyring, err := openpgp.ReadArmoredKeyRing(strings.NewReader(p.privateKey))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse private key: %w", err)
+	}
+
+	// Decrypt the private key if it has a passphrase
+	if p.passphrase != "" {
+		for _, entity := range keyring {
+			if entity.PrivateKey != nil && entity.PrivateKey.Encrypted {
+				err = entity.PrivateKey.Decrypt([]byte(p.passphrase))
+				if err != nil {
+					return nil, fmt.Errorf("failed to decrypt private key with passphrase: %w", err)
+				}
+			}
+			for _, subkey := range entity.Subkeys {
+				if subkey.PrivateKey != nil && subkey.PrivateKey.Encrypted {
+					err = subkey.PrivateKey.Decrypt([]byte(p.passphrase))
+					if err != nil {
+						return nil, fmt.Errorf("failed to decrypt subkey with passphrase: %w", err)
+					}
+				}
+			}
+		}
 	}
 
 	// Try to decrypt the data

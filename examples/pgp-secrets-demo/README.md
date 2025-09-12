@@ -5,7 +5,7 @@ This directory contains a sample Docker Compose stack that demonstrates the PGP 
 ## Files
 
 - `docker-compose.yml` - The main compose file that references environment variables
-- `.env` - Regular (non-sensitive) environment variables
+- `stack.env` - Regular (non-sensitive) environment variables for GitOps stacks
 - `secrets.env` - Example of what the decrypted secrets would look like
 - `html/index.html` - Simple web page served by nginx
 
@@ -33,13 +33,15 @@ This directory contains a sample Docker Compose stack that demonstrates the PGP 
 
 When Portainer deploys this stack:
 
-1. It reads `.env` for regular environment variables
+1. It reads `stack.env` for regular environment variables
 2. It detects `stack.secrets.env.pgp` and decrypts it
 3. The decrypted secrets are merged with other environment variables
 4. The stack is deployed with all variables available
 
 The final environment will contain:
-- `PUBLIC_VAR=hello_world` (from .env)
+- `PUBLIC_VAR=hello_world` (from stack.env)
+- `APP_NAME=PGP Demo Stack` (from stack.env)
+- `DEBUG=false` (from stack.env)
 - `DATABASE_PASSWORD=super_secret_db_password_123` (from decrypted secrets)
 - `API_TOKEN=sk_live_abc123xyz789_secret_token` (from decrypted secrets)
 - `WEBHOOK_SECRET=whsec_example_webhook_secret_456` (from decrypted secrets)

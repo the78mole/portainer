@@ -14,6 +14,7 @@ import { BackupSettingsPanel } from './BackupSettingsView';
 import { HelmCertPanel } from './HelmCertPanel';
 import { HiddenContainersPanel } from './HiddenContainersPanel/HiddenContainersPanel';
 import { KubeSettingsPanel } from './KubeSettingsPanel';
+import { PGPSettingsPanel } from './PGPSettingsPanel';
 import { SSLSettingsPanelWrapper } from './SSLSettingsPanel/SSLSettingsPanel';
 import { ExperimentalFeatures } from './ExperimentalFeatures';
 
@@ -43,6 +44,8 @@ export function SettingsView() {
             />
 
             <KubeSettingsPanel settings={settingsQuery.data} />
+
+            <PGPSettingsPanel settings={settingsQuery.data} />
           </>
         )}
 

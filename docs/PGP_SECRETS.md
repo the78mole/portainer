@@ -35,9 +35,11 @@ Your Git repository should contain:
 ```
 my-stack/
 ├── docker-compose.yml        # Your compose file
-├── .env                     # Regular environment variables (optional)
+├── stack.env                # Regular environment variables (optional)
 └── stack.secrets.env.pgp    # PGP-encrypted secrets
 ```
+
+**Note**: For GitOps repository-based stacks, Portainer uses `stack.env` as the default environment file name, not `.env`.
 
 ## Usage Example
 
@@ -73,7 +75,28 @@ gpg --armor --encrypt --recipient your-email@example.com secrets.env
 mv secrets.env.asc stack.secrets.env.pgp
 ```
 
-### 4. Configure Portainer
+### 4. Configure GPG Agent (Optional but Recommended)
+
+To avoid entering your passphrase repeatedly, add your key to the GPG agent:
+
+```bash
+# Add your private key to the GPG agent
+gpg --import private.key
+
+# Start gpg-agent and add to your shell profile
+echo 'eval $(gpg-agent --daemon)' >> ~/.bashrc
+source ~/.bashrc
+
+# Pre-load the key in the agent (you'll be prompted for passphrase once)
+echo "test" | gpg --clearsign --default-key your-email@example.com > /dev/null
+
+# Optional: Configure agent to cache passphrase longer (default is 10 minutes)
+echo "default-cache-ttl 28800" >> ~/.gnupg/gpg-agent.conf  # 8 hours
+echo "max-cache-ttl 86400" >> ~/.gnupg/gpg-agent.conf      # 24 hours
+gpg-connect-agent reloadagent /bye
+```
+
+### 5. Configure Portainer
 
 Set the private key in Portainer's environment:
 
@@ -81,7 +104,7 @@ Set the private key in Portainer's environment:
 export PORTAINER_PGP_PRIVATE_KEY="$(cat private.key)"
 ```
 
-### 5. Deploy Stack
+### 6. Deploy Stack
 
 When you deploy a stack from Git, Portainer will:
 
@@ -95,7 +118,7 @@ When you deploy a stack from Git, Portainer will:
 
 Environment variables are processed in this order (later values override earlier ones):
 
-1. Default `.env` file from the repository
+1. Default `stack.env` file from the repository
 2. Environment variables configured in Portainer UI
 3. Decrypted secrets from `stack.secrets.env.pgp`
 

@@ -37,6 +37,11 @@ export interface Pair {
   value?: string;
 }
 
+export interface PGPSettings {
+  PrivateKey?: string;
+  Passphrase?: string;
+}
+
 export interface OpenAMTConfiguration {
   enabled: boolean;
   mpsServer: string;
@@ -110,6 +115,7 @@ export interface Settings {
   LDAPSettings: LDAPSettings;
   OAuthSettings: OAuthSettings;
   openAMTConfiguration: OpenAMTConfiguration;
+  PGPSettings: PGPSettings;
   FeatureFlagSettings: { [key: Feature]: boolean };
   SnapshotInterval: string;
   TemplatesURL: string;

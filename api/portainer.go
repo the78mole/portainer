@@ -988,6 +988,14 @@ type (
 		AsyncMode bool `json:"AsyncMode,omitempty" example:"false"`
 	}
 
+	// PGPSettings represents the PGP configuration for encrypted secrets
+	PGPSettings struct {
+		// PGP private key for decrypting secrets (ASCII armored format)
+		PrivateKey string `json:"PrivateKey,omitempty"`
+		// Passphrase for the private key (optional)
+		Passphrase string `json:"Passphrase,omitempty"`
+	}
+
 	// Settings represents the application settings
 	Settings struct {
 		// URL to a logo that will be displayed on the login page as well as on top of the sidebar. Will use default Portainer logo when value is empty string
@@ -1000,6 +1008,7 @@ type (
 		LDAPSettings         LDAPSettings                  `json:"LDAPSettings"`
 		OAuthSettings        OAuthSettings                 `json:"OAuthSettings"`
 		OpenAMTConfiguration OpenAMTConfiguration          `json:"openAMTConfiguration"`
+		PGPSettings          PGPSettings                   `json:"PGPSettings"`
 		FeatureFlagSettings  map[featureflags.Feature]bool `json:"FeatureFlagSettings"`
 		// The interval in which environment(endpoint) snapshots are created
 		SnapshotInterval string `json:"SnapshotInterval" example:"5m"`
