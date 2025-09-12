@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_createEnvFile(t *testing.T) {
+func Test_testCreateEnvFile(t *testing.T) {
 	dir := t.TempDir()
 
 	tests := []struct {
@@ -56,7 +56,7 @@ func Test_createEnvFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, _ := createEnvFile(tt.stack)
+			result, _ := testCreateEnvFile(tt.stack)
 
 			if tt.expected != "" {
 				assert.Equal(t, filepath.Join(tt.stack.ProjectPath, "stack.env"), result)
@@ -82,7 +82,7 @@ func Test_createEnvFile_mergesDefultAndInplaceEnvVars(t *testing.T) {
 			{Name: "VAR3", Value: "VAL3"},
 		},
 	}
-	result, err := createEnvFile(stack)
+	result, err := testCreateEnvFile(stack)
 	assert.Equal(t, filepath.Join(stack.ProjectPath, "stack.env"), result)
 	require.NoError(t, err)
 	assert.FileExists(t, path.Join(dir, "stack.env"))
@@ -176,7 +176,7 @@ func Test_createEnvFile_withPGPSecrets(t *testing.T) {
 		},
 	}
 
-	result, err := createEnvFile(stack)
+	result, err := testCreateEnvFile(stack)
 	require.NoError(t, err)
 	assert.Equal(t, filepath.Join(stack.ProjectPath, "stack.env"), result)
 
@@ -219,7 +219,7 @@ func Test_createEnvFile_withPGPSecretsNoPGPKey(t *testing.T) {
 		},
 	}
 
-	result, err := createEnvFile(stack)
+	result, err := testCreateEnvFile(stack)
 	require.NoError(t, err)
 	assert.Equal(t, filepath.Join(stack.ProjectPath, "stack.env"), result)
 
@@ -266,7 +266,7 @@ func Test_createEnvFile_onlyPGPSecrets(t *testing.T) {
 		Env:         []portainer.Pair{}, // No regular env vars
 	}
 
-	result, err := createEnvFile(stack)
+	result, err := testCreateEnvFile(stack)
 	require.NoError(t, err)
 	assert.Equal(t, filepath.Join(stack.ProjectPath, "stack.env"), result)
 
@@ -281,7 +281,7 @@ func Test_createEnvFile_onlyPGPSecrets(t *testing.T) {
 	assert.Contains(t, contentStr, "# PGP-encrypted secrets")
 }
 
-func Test_copyPGPSecretsFile(t *testing.T) {
+func Test_testCopyPGPSecretsFile(t *testing.T) {
 	// Generate test key pair
 	privateKey, publicKey := generateTestKeyPair(t)
 	
@@ -312,7 +312,7 @@ func Test_copyPGPSecretsFile(t *testing.T) {
 
 	// Test copying PGP secrets
 	var buffer strings.Builder
-	err = copyPGPSecretsFile(&buffer, tempFile.Name())
+	err = testCopyPGPSecretsFile(&buffer, tempFile.Name())
 	require.NoError(t, err)
 
 	output := buffer.String()

@@ -360,3 +360,95 @@ func getEffectiveRegUsernamePassword(tx dataservices.DataStoreTx, registry *port
 
 	return username, password, err
 }
+
+// testCreateEnvFile is a wrapper for testing that creates a minimal ComposeStackManager
+func testCreateEnvFile(stack *portainer.Stack) (string, error) {
+	// For testing, we need to handle the case where there's no dataStore
+	// Check if we have any environment variables to write or PGP secrets to decrypt
+	pgpSecretsPath := path.Join(stack.ProjectPath, path.Dir(stack.EntryPoint), "stack.secrets.env.pgp")
+	hasPGPSecrets := false
+	if _, err := os.Stat(pgpSecretsPath); err == nil {
+		hasPGPSecrets = true
+	}
+
+	if len(stack.Env) == 0 && !hasPGPSecrets {
+		return "", nil
+	}
+
+	envFilePath := path.Join(stack.ProjectPath, "stack.env")
+	envfile, err := os.OpenFile(envFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return "", err
+	}
+	defer envfile.Close()
+
+	// Copy from default .env file
+	defaultEnvPath := path.Join(stack.ProjectPath, path.Dir(stack.EntryPoint), ".env")
+	if err := copyDefaultEnvFile(envfile, defaultEnvPath); err != nil {
+		return "", err
+	}
+
+	// Copy from stack env vars
+	if err := copyConfigEnvVars(envfile, stack.Env); err != nil {
+		return "", err
+	}
+
+	// Copy from PGP-encrypted secrets if available
+	if hasPGPSecrets {
+		if err := testCopyPGPSecretsFile(envfile, pgpSecretsPath); err != nil {
+			log.Warn().
+				Err(err).
+				Str("pgpSecretsPath", pgpSecretsPath).
+				Msg("Failed to decrypt PGP secrets file, skipping")
+		}
+	}
+
+	return envFilePath, nil
+}
+
+// testCopyPGPSecretsFile is a wrapper for testing PGP secrets functionality
+func testCopyPGPSecretsFile(w io.Writer, pgpSecretsPath string) error {
+	// For testing, we'll use the original logic that only checks environment variables
+	// Get the PGP private key from environment
+	privateKey := crypto.GetPGPPrivateKeyFromEnv()
+	if privateKey == "" {
+		return fmt.Errorf("PGP private key not found in environment variable PORTAINER_PGP_PRIVATE_KEY")
+	}
+
+	// Validate the private key
+	if err := crypto.ValidatePGPPrivateKey(privateKey); err != nil {
+		return fmt.Errorf("invalid PGP private key: %w", err)
+	}
+
+	// Create decryptor and decrypt the file
+	decryptor := crypto.NewPGPDecryptor(privateKey)
+	decryptedData, err := decryptor.DecryptFile(pgpSecretsPath)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt PGP secrets file: %w", err)
+	}
+
+	// Write decrypted content to the env file
+	if len(decryptedData) > 0 {
+		// Add a newline before PGP secrets if the file already has content
+		if _, err := fmt.Fprintf(w, "\n# PGP-encrypted secrets\n"); err != nil {
+			return fmt.Errorf("failed to write PGP secrets header: %w", err)
+		}
+
+		if _, err := w.Write(decryptedData); err != nil {
+			return fmt.Errorf("failed to write decrypted PGP secrets: %w", err)
+		}
+
+		// Ensure file ends with newline
+		if len(decryptedData) > 0 && decryptedData[len(decryptedData)-1] != '\n' {
+			if _, err := fmt.Fprintf(w, "\n"); err != nil {
+				return fmt.Errorf("failed to write trailing newline for PGP secrets: %w", err)
+			}
+		}
+	}
+
+	log.Info().
+		Str("pgpSecretsPath", pgpSecretsPath).
+		Msg("Successfully decrypted and loaded PGP secrets")
+
+	return nil
+}

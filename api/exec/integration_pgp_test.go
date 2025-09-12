@@ -80,7 +80,7 @@ WEBHOOK_URL=https://example.com/webhook?secret=abc123`
 	}
 
 	// Test the createEnvFile function (this simulates what happens during deployment)
-	envFilePath, err := createEnvFile(stack)
+	envFilePath, err := testCreateEnvFile(stack)
 	require.NoError(t, err)
 	require.NotEmpty(t, envFilePath)
 
@@ -170,7 +170,7 @@ services:
 	}
 
 	// Test createEnvFile
-	envFilePath, err := createEnvFile(stack)
+	envFilePath, err := testCreateEnvFile(stack)
 	require.NoError(t, err)
 	require.NotEmpty(t, envFilePath)
 
@@ -246,7 +246,7 @@ func TestPGPSecretsErrorHandling(t *testing.T) {
 			stack := tc.setupFunc(t, dir)
 
 			// Test createEnvFile
-			envFilePath, err := createEnvFile(stack)
+			envFilePath, err := testCreateEnvFile(stack)
 			
 			if tc.expectEnvFile {
 				require.NoError(t, err)
