@@ -76,7 +76,7 @@ export PORTAINER_PGP_PRIVATE_KEY="$(cat private.key)"
 ```
 my-stack/
 ├── docker-compose.yml
-├── .env                      # Regular environment variables
+├── stack.env                      # Regular environment variables
 └── stack.secrets.env.pgp     # Encrypted secrets
 ```
 
