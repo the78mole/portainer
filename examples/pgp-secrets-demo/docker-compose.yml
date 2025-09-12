@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   web:
-    image: php:8.2-apache
+    build: .
     ports:
       - "8080:80"
     environment:
@@ -11,8 +11,6 @@ services:
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - API_TOKEN=${API_TOKEN}
       - WEBHOOK_SECRET=${WEBHOOK_SECRET}
-    volumes:
-      - ./html:/var/www/html:ro
 
   redis:
     image: redis:alpine

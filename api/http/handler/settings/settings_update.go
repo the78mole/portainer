@@ -7,6 +7,7 @@ import (
 	"time"
 
 	portainer "github.com/portainer/portainer/api"
+	"github.com/portainer/portainer/api/crypto"
 	"github.com/portainer/portainer/api/dataservices"
 	"github.com/portainer/portainer/api/filesystem"
 	"github.com/portainer/portainer/api/internal/edge"
@@ -55,6 +56,8 @@ type settingsUpdatePayload struct {
 	EnforceEdgeID *bool `example:"false"`
 	// EdgePortainerURL is the URL that is exposed to edge agents
 	EdgePortainerURL *string `json:"EdgePortainerURL"`
+	// PGP settings for encrypted secrets
+	PGPSettings *portainer.PGPSettings `json:"PGPSettings"`
 }
 
 func (payload *settingsUpdatePayload) Validate(r *http.Request) error {
@@ -95,6 +98,12 @@ func (payload *settingsUpdatePayload) Validate(r *http.Request) error {
 	if payload.OAuthSettings != nil {
 		if payload.OAuthSettings.AuthStyle < oauth2.AuthStyleAutoDetect || payload.OAuthSettings.AuthStyle > oauth2.AuthStyleInHeader {
 			return errors.New("Invalid OAuth AuthStyle")
+		}
+	}
+
+	if payload.PGPSettings != nil && payload.PGPSettings.PrivateKey != "" {
+		if err := crypto.ValidatePGPPrivateKey(payload.PGPSettings.PrivateKey); err != nil {
+			return errors.New("Invalid PGP private key format")
 		}
 	}
 
@@ -229,6 +238,10 @@ func (handler *Handler) updateSettings(tx dataservices.DataStoreTx, payload sett
 	}
 
 	settings.KubectlShellImage = *cmp.Or(payload.KubectlShellImage, &settings.KubectlShellImage)
+
+	if payload.PGPSettings != nil {
+		settings.PGPSettings = *payload.PGPSettings
+	}
 
 	if err := tx.Settings().UpdateSettings(settings); err != nil {
 		return nil, httperror.InternalServerError("Unable to persist settings changes inside the database", err)
