@@ -5,7 +5,7 @@ import { Button } from '@@/buttons';
 import { FormControl } from '@@/form-components/FormControl';
 import { Input } from '@@/form-components/Input';
 import { Widget, WidgetBody, WidgetTitle } from '@@/Widget';
-import { notifySuccess, notifyError } from '@@/notifications';
+import { notifySuccess, notifyError } from '@/portainer/services/notifications';
 import { withInvalidate, queryClient } from '@/react-tools/react-query';
 
 import { Settings, PGPSettings } from '../types';
