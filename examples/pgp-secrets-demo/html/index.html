@@ -1,11 +1,157 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>PGP Secrets Demo</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PGP Secrets Demo - JavaScript Version</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007cbb;
+            padding-bottom: 10px;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .env-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007cbb;
+        }
+        .env-item {
+            margin: 10px 0;
+            font-family: monospace;
+            background-color: white;
+            padding: 8px;
+            border-radius: 3px;
+            border: 1px solid #dee2e6;
+        }
+        .env-name {
+            font-weight: bold;
+            color: #007cbb;
+        }
+        .env-value {
+            color: #333;
+            margin-left: 10px;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .info-box {
+            background-color: #e7f3ff;
+            border: 1px solid #b3d7ff;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
 </head>
 <body>
-    <h1>PGP Secrets Demo</h1>
-    <p>This is a demonstration of Portainer's PGP secrets feature.</p>
-    <p>The sensitive environment variables are loaded from an encrypted file.</p>
+    <div class="container">
+        <h1>🔐 PGP Secrets Demo - Environment Check</h1>
+        
+        <div class="info-box">
+            <strong>Note:</strong> This is a static HTML version. For dynamic environment variable checking, 
+            use the PHP version (<code>index.php</code>) with a PHP-enabled web server.
+        </div>
+        
+        <div class="env-section">
+            <h3>📋 How to Verify PGP Secrets</h3>
+            <p>To check if your PGP secrets are working correctly:</p>
+            <ol>
+                <li><strong>Check Container Logs:</strong>
+                    <pre>docker-compose logs web</pre>
+                </li>
+                <li><strong>Inspect Environment Variables:</strong>
+                    <pre>docker-compose exec web env | grep -E "(PUBLIC_VAR|DATABASE_PASSWORD|API_TOKEN|WEBHOOK_SECRET)"</pre>
+                </li>
+                <li><strong>Access the PHP Version:</strong>
+                    <p>Visit <a href="index.php">index.php</a> for dynamic environment variable display</p>
+                </li>
+                <li><strong>Check Portainer Logs:</strong>
+                    <p>Look for messages like "Successfully decrypted and loaded PGP secrets" in Portainer logs</p>
+                </li>
+            </ol>
+        </div>
+        
+        <div class="env-section">
+            <h3>✅ Expected Environment Variables</h3>
+            <p>If PGP decryption is working correctly, these variables should be available to the container:</p>
+            
+            <h4>Public Variables (from stack.env):</h4>
+            <div class="env-item">
+                <span class="env-name">PUBLIC_VAR:</span> <span class="env-value">hello_world</span>
+            </div>
+            <div class="env-item">
+                <span class="env-name">APP_NAME:</span> <span class="env-value">PGP Demo Stack</span>
+            </div>
+            <div class="env-item">
+                <span class="env-name">DEBUG:</span> <span class="env-value">false</span>
+            </div>
+            
+            <h4>Secret Variables (from stack.secrets.env.pgp):</h4>
+            <div class="env-item">
+                <span class="env-name">DATABASE_PASSWORD:</span> <span class="env-value">super_secret_db_password_123</span>
+            </div>
+            <div class="env-item">
+                <span class="env-name">API_TOKEN:</span> <span class="env-value">sk_live_abc123xyz789_secret_token</span>
+            </div>
+            <div class="env-item">
+                <span class="env-name">WEBHOOK_SECRET:</span> <span class="env-value">whsec_example_webhook_secret_456</span>
+            </div>
+        </div>
+        
+        <div class="env-section">
+            <h3>🔧 Troubleshooting</h3>
+            <ul>
+                <li><strong>Secrets not loaded:</strong> Check if PGP private key is configured in Portainer Settings</li>
+                <li><strong>Wrong passphrase:</strong> Ensure passphrase "demo123" is entered correctly</li>
+                <li><strong>File not found:</strong> Verify stack.secrets.env.pgp exists in the stack directory</li>
+                <li><strong>Decryption fails:</strong> Check Portainer logs for PGP-related error messages</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <strong>Portainer PGP Secrets Demo</strong> - This demonstrates how secrets are automatically 
+            decrypted from <code>stack.secrets.env.pgp</code> using the configured PGP private key.
+        </div>
+    </div>
 </body>
 </html>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { EyeIcon, EyeOffIcon } from 'lucide-react';
 
 import { Button } from '@@/buttons';
 import { FormControl } from '@@/form-components/FormControl';
@@ -110,13 +111,9 @@ export function PGPSettingsPanel({ settings }: Props) {
                     type="button"
                     onClick={() => setIsPasswordVisible(!isPasswordVisible)}
                     data-cy="toggle-passphrase-visibility"
+                    icon={isPasswordVisible ? EyeOffIcon : EyeIcon}
                   >
-                    <i
-                      className={`fa ${
-                        isPasswordVisible ? 'fa-eye-slash' : 'fa-eye'
-                      }`}
-                      aria-hidden="true"
-                    />
+                    {isPasswordVisible ? 'Hide' : 'Show'}
                   </Button>
                 </div>
               </div>

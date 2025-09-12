@@ -1,16 +1,18 @@
 version: '3.8'
 services:
   web:
-    image: nginx:alpine
+    image: php:8.2-apache
     ports:
       - "8080:80"
     environment:
       - PUBLIC_VAR=${PUBLIC_VAR:-default_value}
+      - APP_NAME=${APP_NAME:-Demo}
+      - DEBUG=${DEBUG:-false}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - API_TOKEN=${API_TOKEN}
       - WEBHOOK_SECRET=${WEBHOOK_SECRET}
     volumes:
-      - ./html:/usr/share/nginx/html:ro
+      - ./html:/var/www/html:ro
 
   redis:
     image: redis:alpine
