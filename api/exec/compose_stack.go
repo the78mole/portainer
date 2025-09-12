@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	portainer "github.com/portainer/portainer/api"
+	"github.com/portainer/portainer/api/crypto"
 	"github.com/portainer/portainer/api/dataservices"
 	"github.com/portainer/portainer/api/http/proxy"
 	"github.com/portainer/portainer/api/http/proxy/factory"
@@ -171,7 +172,14 @@ func (manager *ComposeStackManager) fetchEndpointProxy(endpoint *portainer.Endpo
 // createEnvFile creates a file that would hold both "in-place" and default environment variables.
 // It will return the name of the file if the stack has "in-place" env vars, otherwise empty string.
 func createEnvFile(stack *portainer.Stack) (string, error) {
-	if len(stack.Env) == 0 {
+	// Check if we have any environment variables to write or PGP secrets to decrypt
+	pgpSecretsPath := path.Join(stack.ProjectPath, path.Dir(stack.EntryPoint), "stack.secrets.env.pgp")
+	hasPGPSecrets := false
+	if _, err := os.Stat(pgpSecretsPath); err == nil {
+		hasPGPSecrets = true
+	}
+
+	if len(stack.Env) == 0 && !hasPGPSecrets {
 		return "", nil
 	}
 
@@ -191,6 +199,16 @@ func createEnvFile(stack *portainer.Stack) (string, error) {
 	// Copy from stack env vars
 	if err := copyConfigEnvVars(envfile, stack.Env); err != nil {
 		return "", err
+	}
+
+	// Copy from PGP-encrypted secrets if available
+	if hasPGPSecrets {
+		if err := copyPGPSecretsFile(envfile, pgpSecretsPath); err != nil {
+			log.Warn().
+				Err(err).
+				Str("pgpSecretsPath", pgpSecretsPath).
+				Msg("Failed to decrypt PGP secrets file, skipping")
+		}
 	}
 
 	return envFilePath, nil
@@ -223,6 +241,52 @@ func copyConfigEnvVars(w io.Writer, envs []portainer.Pair) error {
 			return fmt.Errorf("failed to copy config env vars: %w", err)
 		}
 	}
+	return nil
+}
+
+// copyPGPSecretsFile decrypts and copies the PGP-encrypted secrets file to the writer
+func copyPGPSecretsFile(w io.Writer, pgpSecretsPath string) error {
+	// Get the PGP private key from environment
+	privateKey := crypto.GetPGPPrivateKeyFromEnv()
+	if privateKey == "" {
+		return fmt.Errorf("PGP private key not found in environment variable PORTAINER_PGP_PRIVATE_KEY")
+	}
+
+	// Validate the private key
+	if err := crypto.ValidatePGPPrivateKey(privateKey); err != nil {
+		return fmt.Errorf("invalid PGP private key: %w", err)
+	}
+
+	// Create decryptor and decrypt the file
+	decryptor := crypto.NewPGPDecryptor(privateKey)
+	decryptedData, err := decryptor.DecryptFile(pgpSecretsPath)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt PGP secrets file: %w", err)
+	}
+
+	// Write decrypted content to the env file
+	if len(decryptedData) > 0 {
+		// Add a newline before PGP secrets if the file already has content
+		if _, err := fmt.Fprintf(w, "\n# PGP-encrypted secrets\n"); err != nil {
+			return fmt.Errorf("failed to write PGP secrets header: %w", err)
+		}
+
+		if _, err := w.Write(decryptedData); err != nil {
+			return fmt.Errorf("failed to write decrypted PGP secrets: %w", err)
+		}
+
+		// Ensure file ends with newline
+		if len(decryptedData) > 0 && decryptedData[len(decryptedData)-1] != '\n' {
+			if _, err := fmt.Fprintf(w, "\n"); err != nil {
+				return fmt.Errorf("failed to write trailing newline for PGP secrets: %w", err)
+			}
+		}
+	}
+
+	log.Info().
+		Str("pgpSecretsPath", pgpSecretsPath).
+		Msg("Successfully decrypted and loaded PGP secrets")
+
 	return nil
 }
 
